@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/auth";
 import { useTheme, ACCENT_PALETTES, type ThemeMode, type ThemeAccent } from "@/contexts/theme";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { api } from "@/lib/api";
+import { api, type AdminNotificationCounters } from "@/lib/api";
 
 const PANEL_VERSION = "3.1.9";
 const GITHUB_URL = "https://github.com/STEALTHNET-APP/remnawave-STEALTHNET-Bot";
@@ -99,6 +99,9 @@ export function DashboardLayout() {
   const [brand, setBrand] = useState<{ serviceName: string; logo: string | null }>({ serviceName: "", logo: null });
   const [showThemePanel, setShowThemePanel] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationToasts, setNotificationToasts] = useState<{ id: number; text: string }[]>([]);
+  const lastCountersRef = useRef<AdminNotificationCounters | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -122,9 +125,58 @@ export function DashboardLayout() {
   useEffect(() => {
     const token = state.accessToken;
     if (token) {
-      api.getSettings(token).then((s) => setBrand({ serviceName: s.serviceName, logo: s.logo ?? null })).catch(() => {});
+      api
+        .getSettings(token)
+        .then((s) => {
+          setBrand({ serviceName: s.serviceName, logo: s.logo ?? null });
+          setNotificationsEnabled(s.adminFrontNotificationsEnabled ?? true);
+        })
+        .catch(() => {});
     }
   }, [state.accessToken]);
+
+  useEffect(() => {
+    const token = state.accessToken;
+    if (!token || !notificationsEnabled) return;
+    let cancelled = false;
+    const pushToast = (text: string) => {
+      const id = Date.now() + Math.random();
+      setNotificationToasts((prev) => [...prev, { id, text }]);
+      window.setTimeout(() => {
+        setNotificationToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 5000);
+    };
+    const fetchCounters = async () => {
+      try {
+        const data = await api.getAdminNotificationCounters(token);
+        if (cancelled) return;
+        const last = lastCountersRef.current;
+        if (last) {
+          if (data.totalClients > last.totalClients) {
+            pushToast("Новый пользователь зарегистрировался.");
+          }
+          if (data.totalTariffPayments > last.totalTariffPayments) {
+            pushToast("Есть новые оплаты тарифов.");
+          }
+          if (data.totalBalanceTopups > last.totalBalanceTopups) {
+            pushToast("Есть новые пополнения баланса.");
+          }
+          if (data.totalTickets > last.totalTickets) {
+            pushToast("Появились новые тикеты.");
+          }
+        }
+        lastCountersRef.current = data;
+      } catch {
+        // игнорируем ошибки опроса
+      }
+    };
+    fetchCounters();
+    const id = window.setInterval(fetchCounters, 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [state.accessToken, notificationsEnabled]);
 
   async function handleLogout() {
     await logout();
@@ -308,6 +360,18 @@ export function DashboardLayout() {
           <Outlet />
         </motion.div>
       </main>
+      {notificationToasts.length > 0 && (
+        <div className="fixed bottom-4 right-4 z-50 space-y-2">
+          {notificationToasts.map((t) => (
+            <div
+              key={t.id}
+              className="max-w-xs rounded-lg border bg-card px-4 py-3 text-sm shadow-lg text-foreground"
+            >
+              {t.text}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

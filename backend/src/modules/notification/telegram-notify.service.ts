@@ -6,6 +6,16 @@
 import { prisma } from "../../db.js";
 import { getSystemConfig } from "../client/client.service.js";
 
+type AdminNotificationEventType = "balance_topup" | "tariff_payment" | "new_client" | "new_ticket";
+
+type AdminNotificationPreferenceRow = {
+  telegramId: string;
+  notifyBalanceTopup: boolean;
+  notifyTariffPayment: boolean;
+  notifyNewClient: boolean;
+  notifyNewTicket: boolean;
+};
+
 async function sendTelegramToUser(telegramId: string, text: string): Promise<void> {
   const config = await getSystemConfig();
   const token = config.telegramBotToken?.trim();
@@ -37,6 +47,41 @@ async function sendTelegramToUser(telegramId: string, text: string): Promise<voi
   }
 }
 
+async function sendTelegramToAdminsForEvent(eventType: AdminNotificationEventType, text: string): Promise<void> {
+  const config = await getSystemConfig();
+  const adminIds = config.botAdminTelegramIds ?? [];
+  if (!adminIds.length) return;
+  const prefs = (await prisma.adminNotificationPreference.findMany({
+    where: { telegramId: { in: adminIds } },
+  })) as AdminNotificationPreferenceRow[];
+  const byId = new Map<string, AdminNotificationPreferenceRow>(prefs.map((p) => [p.telegramId, p]));
+  const shouldSend = (telegramId: string) => {
+    const p = byId.get(telegramId);
+    if (!p) return true;
+    switch (eventType) {
+      case "balance_topup":
+        return p.notifyBalanceTopup;
+      case "tariff_payment":
+        return p.notifyTariffPayment;
+      case "new_client":
+        return p.notifyNewClient;
+      case "new_ticket":
+        return p.notifyNewTicket;
+      default:
+        return true;
+    }
+  };
+  await Promise.all(
+    adminIds
+      .filter((id) => shouldSend(id))
+      .map((id) =>
+        sendTelegramToUser(id, text).catch((e) => {
+          console.warn("[Telegram notify] send to admin failed", e);
+        })
+      )
+  );
+}
+
 function formatMoney(amount: number, currency: string): string {
   const curr = (currency || "RUB").toUpperCase();
   if (curr === "RUB") return `${amount.toFixed(2)} ₽`;
@@ -50,11 +95,21 @@ function formatMoney(amount: number, currency: string): string {
 export async function notifyBalanceToppedUp(clientId: string, amount: number, currency: string): Promise<void> {
   const client = await prisma.client.findUnique({
     where: { id: clientId },
-    select: { telegramId: true },
+    select: { telegramId: true, email: true, telegramUsername: true, id: true },
   });
-  if (!client?.telegramId) return;
-  const text = `✅ <b>Баланс пополнен</b> на ${formatMoney(amount, currency)}.`;
-  await sendTelegramToUser(client.telegramId, text);
+  if (!client) return;
+  const textForClient = client.telegramId ? `✅ <b>Баланс пополнен</b> на ${formatMoney(amount, currency)}.` : null;
+  if (client.telegramId && textForClient) {
+    await sendTelegramToUser(client.telegramId, textForClient);
+  }
+  const clientLabel =
+    client.email?.trim() ||
+    (client.telegramUsername ? `@${client.telegramUsername}` : client.id);
+  const textForAdmins =
+    `💰 <b>Пополнение баланса</b>\n\n` +
+    `Клиент: ${escapeHtml(clientLabel)}\n` +
+    `Сумма: ${formatMoney(amount, currency)}`;
+  await sendTelegramToAdminsForEvent("balance_topup", textForAdmins);
 }
 
 /**
@@ -63,17 +118,186 @@ export async function notifyBalanceToppedUp(clientId: string, amount: number, cu
 export async function notifyTariffActivated(clientId: string, paymentId: string): Promise<void> {
   const client = await prisma.client.findUnique({
     where: { id: clientId },
-    select: { telegramId: true },
+    select: { telegramId: true, email: true, telegramUsername: true, id: true },
   });
-  if (!client?.telegramId) return;
+  if (!client) return;
 
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
     select: { tariff: { select: { name: true } } },
   });
   const tariffName = payment?.tariff?.name?.trim() || "Тариф";
-  const text = `✅ <b>Тариф «${escapeHtml(tariffName)}»</b> оплачен и активирован.\n\nМожете подключаться к VPN.`;
-  await sendTelegramToUser(client.telegramId, text);
+  if (client.telegramId) {
+    const textClient = `✅ <b>Тариф «${escapeHtml(tariffName)}»</b> оплачен и активирован.\n\nМожете подключаться к VPN.`;
+    await sendTelegramToUser(client.telegramId, textClient);
+  }
+  const clientLabel =
+    client.email?.trim() ||
+    (client.telegramUsername ? `@${client.telegramUsername}` : client.id);
+  const textAdmins =
+    `📦 <b>Оплата тарифа</b>\n\n` +
+    `Клиент: ${escapeHtml(clientLabel)}\n` +
+    `Тариф: «${escapeHtml(tariffName)}»`;
+  await sendTelegramToAdminsForEvent("tariff_payment", textAdmins);
+}
+
+export async function notifyAdminsAboutNewTicket(params: {
+  ticketId: string;
+  clientId: string;
+  subject: string;
+  firstMessage: string;
+}): Promise<void> {
+  const [client, ticket] = await Promise.all([
+    prisma.client.findUnique({
+      where: { id: params.clientId },
+      select: { email: true, telegramUsername: true, id: true },
+    }),
+    prisma.ticket.findUnique({
+      where: { id: params.ticketId },
+      select: { id: true, subject: true, status: true },
+    }),
+  ]);
+  if (!ticket) return;
+  const config = await getSystemConfig();
+  const clientLabel =
+    client?.email?.trim() ||
+    (client?.telegramUsername ? `@${client.telegramUsername}` : client?.id || "unknown");
+  const baseUrl = (config.publicAppUrl || "").replace(/\/+$/, "");
+  const link =
+    baseUrl && ticket.id
+      ? `\n\nАдминка: ${escapeHtml(`${baseUrl}/admin/tickets`)}`
+      : "";
+  const preview =
+    params.firstMessage.length > 200
+      ? `${params.firstMessage.slice(0, 197)}...`
+      : params.firstMessage;
+  const text =
+    `🆕 <b>Новый тикет</b>\n\n` +
+    `Тема: <b>${escapeHtml(ticket.subject)}</b>\n` +
+    `Клиент: ${escapeHtml(clientLabel)}\n\n` +
+    `${escapeHtml(preview)}${link}`;
+  await sendTelegramToAdminsForEvent("new_ticket", text);
+}
+
+export async function notifyAdminsAboutClientTicketMessage(params: {
+  ticketId: string;
+  clientId: string;
+  content: string;
+}): Promise<void> {
+  const [client, ticket] = await Promise.all([
+    prisma.client.findUnique({
+      where: { id: params.clientId },
+      select: { email: true, telegramUsername: true, id: true },
+    }),
+    prisma.ticket.findUnique({
+      where: { id: params.ticketId },
+      select: { id: true, subject: true, status: true },
+    }),
+  ]);
+  if (!ticket) return;
+  const config = await getSystemConfig();
+  const clientLabel =
+    client?.email?.trim() ||
+    (client?.telegramUsername ? `@${client.telegramUsername}` : client?.id || "unknown");
+  const baseUrl = (config.publicAppUrl || "").replace(/\/+$/, "");
+  const link =
+    baseUrl && ticket.id
+      ? `\n\nАдминка: ${escapeHtml(`${baseUrl}/admin/tickets`)}`
+      : "";
+  const preview =
+    params.content.length > 200 ? `${params.content.slice(0, 197)}...` : params.content;
+  const text =
+    `💬 <b>Новое сообщение в тикете</b>\n\n` +
+    `Тема: <b>${escapeHtml(ticket.subject)}</b>\n` +
+    `Клиент: ${escapeHtml(clientLabel)}\n\n` +
+    `${escapeHtml(preview)}${link}`;
+  await sendTelegramToAdminsForEvent("new_ticket", text);
+}
+
+export async function notifyAdminsAboutSupportReply(params: {
+  ticketId: string;
+  clientId: string;
+  content: string;
+}): Promise<void> {
+  const [client, ticket] = await Promise.all([
+    prisma.client.findUnique({
+      where: { id: params.clientId },
+      select: { email: true, telegramUsername: true, id: true },
+    }),
+    prisma.ticket.findUnique({
+      where: { id: params.ticketId },
+      select: { id: true, subject: true, status: true },
+    }),
+  ]);
+  if (!ticket) return;
+  const config = await getSystemConfig();
+  const clientLabel =
+    client?.email?.trim() ||
+    (client?.telegramUsername ? `@${client.telegramUsername}` : client?.id || "unknown");
+  const baseUrl = (config.publicAppUrl || "").replace(/\/+$/, "");
+  const link =
+    baseUrl && ticket.id
+      ? `\n\nАдминка: ${escapeHtml(`${baseUrl}/admin/tickets`)}`
+      : "";
+  const preview =
+    params.content.length > 200 ? `${params.content.slice(0, 197)}...` : params.content;
+  const text =
+    `✅ <b>Ответ поддержки в тикете</b>\n\n` +
+    `Тема: <b>${escapeHtml(ticket.subject)}</b>\n` +
+    `Клиент: ${escapeHtml(clientLabel)}\n\n` +
+    `${escapeHtml(preview)}${link}`;
+  await sendTelegramToAdminsForEvent("new_ticket", text);
+}
+
+export async function notifyAdminsAboutTicketStatusChange(params: {
+  ticketId: string;
+  clientId: string;
+  subject: string;
+  status: string;
+}): Promise<void> {
+  const client = await prisma.client.findUnique({
+    where: { id: params.clientId },
+    select: { email: true, telegramUsername: true, id: true },
+  });
+  const config = await getSystemConfig();
+  const clientLabel =
+    client?.email?.trim() ||
+    (client?.telegramUsername ? `@${client.telegramUsername}` : client?.id || "unknown");
+  const baseUrl = (config.publicAppUrl || "").replace(/\/+$/, "");
+  const link =
+    baseUrl && params.ticketId
+      ? `\n\nАдминка: ${escapeHtml(`${baseUrl}/admin/tickets`)}`
+      : "";
+  const statusLabel = params.status === "closed" ? "закрыт" : "открыт";
+  const text =
+    `ℹ️ <b>Статус тикета изменён</b>\n\n` +
+    `Тема: <b>${escapeHtml(params.subject)}</b>\n` +
+    `Клиент: ${escapeHtml(clientLabel)}\n` +
+    `Новый статус: <b>${escapeHtml(statusLabel)}</b>${link}`;
+  await sendTelegramToAdminsForEvent("new_ticket", text);
+}
+
+export async function notifyAdminsAboutNewClient(clientId: string): Promise<void> {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    select: { id: true, email: true, telegramUsername: true, createdAt: true },
+  });
+  if (!client) return;
+  const config = await getSystemConfig();
+  const baseUrl = (config.publicAppUrl || "").replace(/\/+$/, "");
+  const clientLabel =
+    client.email?.trim() ||
+    (client.telegramUsername ? `@${client.telegramUsername}` : client.id);
+  const link =
+    baseUrl && client.id
+      ? `\n\nКлиенты: ${escapeHtml(`${baseUrl}/admin/clients`)}`
+      : "";
+  const createdAt = client.createdAt.toISOString().slice(0, 19).replace("T", " ");
+  const text =
+    `👤 <b>Новый клиент</b>\n\n` +
+    `Клиент: ${escapeHtml(clientLabel)}\n` +
+    `Создан: ${escapeHtml(createdAt)}${link}`;
+  await sendTelegramToAdminsForEvent("new_client", text);
 }
 
 function escapeHtml(s: string): string {

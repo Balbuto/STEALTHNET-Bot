@@ -258,6 +258,7 @@ export function ClientsPage() {
                 <tr className="border-b">
                   <th className="text-left py-2 px-2">Email</th>
                   <th className="text-left py-2 px-2">Telegram</th>
+                  <th className="text-left py-2 px-2">Нода</th>
                   <th className="text-left py-2 px-2">Язык</th>
                   <th className="text-left py-2 px-2">Валюта</th>
                   <th className="text-left py-2 px-2">Баланс</th>
@@ -279,6 +280,15 @@ export function ClientsPage() {
                           {c.telegramId != null ? `(ID: ${c.telegramId})` : ""}
                         </span>
                       ) : "—"}
+                    </td>
+                    <td className="py-2 px-2">
+                      {c.activeNode ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 text-xs font-medium">
+                          {c.activeNode}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="py-2 px-2">{c.preferredLang}</td>
                     <td className="py-2 px-2">{c.preferredCurrency}</td>

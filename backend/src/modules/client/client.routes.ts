@@ -15,6 +15,15 @@ import {
   type SellOptionDeviceProduct,
   type SellOptionServerProduct,
 } from "./client.service.js";
+import {
+  notifyAdminsAboutClientTicketMessage,
+  notifyAdminsAboutNewClient,
+  notifyAdminsAboutNewTicket,
+} from "../notification/telegram-notify.service.js";
+import {
+  notifyAdminsAboutClientTicketMessage,
+  notifyAdminsAboutNewTicket,
+} from "../notification/telegram-notify.service.js";
 import { requireClientAuth } from "./client.middleware.js";
 import { remnaCreateUser, remnaUpdateUser, isRemnaConfigured, remnaGetUser, remnaGetUserByUsername, remnaGetUserByEmail, remnaGetUserByTelegramId, extractRemnaUuid, remnaUsernameFromClient, remnaGetUserHwidDevices, remnaDeleteUserHwidDevice } from "../remna/remna.client.js";
 import { sendVerificationEmail, sendLinkEmailVerification, isSmtpConfigured } from "../mail/mail.service.js";
@@ -187,7 +196,7 @@ clientAuthRouter.post("/register", async (req, res) => {
       utmTerm: data.utm_term ?? null,
     },
   });
-
+  notifyAdminsAboutNewClient(client.id).catch(() => {});
   const token = signClientToken(client.id);
   return res.status(201).json({ token, client: toClientShape(client) });
 });
@@ -1205,6 +1214,10 @@ clientRouter.post("/payments/platega", async (req, res) => {
     }
   }
 
+  if (finalAmount < 1) {
+    return res.status(400).json({ message: "Минимальная сумма платежа — 1" });
+  }
+
   // Применяем промокод на скидку (не для опций по умолчанию, можно разрешить — тогда скидка с опции)
   let promoCodeRecord: { id: string } | null = null;
   if (promoCodeStr?.trim() && !extraOption) {
@@ -1756,6 +1769,10 @@ clientRouter.post("/yoomoney/create-form-payment", async (req, res) => {
     }
   }
 
+  if (amountRounded < 1) {
+    return res.status(400).json({ message: "Минимальная сумма платежа — 1" });
+  }
+
   const orderId = randomUUID();
   const payment = await prisma.payment.create({
     data: {
@@ -1929,10 +1946,14 @@ clientRouter.post("/yookassa/create-payment", async (req, res) => {
         if (!singboxTariff || !singboxTariff.enabled) return res.status(400).json({ message: "Тариф Sing-box не найден" });
         singboxTariffIdToStore = singboxTariffIdBody;
         amountRounded = Math.round((amountBody ?? singboxTariff.price) * 100) / 100;
-      } else {
-        if (amountBody == null) return res.status(400).json({ message: "Укажите сумму" });
-        amountRounded = Math.round(amountBody * 100) / 100;
-      }
+    } else {
+      if (amountBody == null) return res.status(400).json({ message: "Укажите сумму" });
+      amountRounded = Math.round(amountBody * 100) / 100;
+    }
+  }
+
+    if (amountRounded < 1) {
+      return res.status(400).json({ message: "Минимальная сумма платежа — 1" });
     }
 
     const client = await prisma.client.findUnique({
@@ -2046,6 +2067,12 @@ clientRouter.post("/tickets", async (req, res) => {
     },
     include: { messages: true },
   });
+  notifyAdminsAboutNewTicket({
+    ticketId: ticket.id,
+    clientId,
+    subject: ticket.subject,
+    firstMessage: body.data.message.trim(),
+  }).catch(() => {});
   return res.status(201).json({
     id: ticket.id,
     subject: ticket.subject,
@@ -2099,6 +2126,11 @@ clientRouter.post("/tickets/:id/messages", async (req, res) => {
     data: { ticketId: ticket.id, authorType: "client", content: body.data.content.trim() },
   });
   await prisma.ticket.update({ where: { id: ticket.id }, data: { updatedAt: new Date() } });
+  notifyAdminsAboutClientTicketMessage({
+    ticketId: ticket.id,
+    clientId,
+    content: body.data.content.trim(),
+  }).catch(() => {});
   return res.status(201).json({ id: msg.id, authorType: msg.authorType, content: msg.content, createdAt: msg.createdAt.toISOString() });
 });
 

@@ -93,6 +93,13 @@ export async function markPaymentPaid(paymentId: string): Promise<MarkPaymentPai
     }
   }
 
+  if (payment.tariffId || payment.proxyTariffId || payment.singboxTariffId) {
+    await prisma.client.update({
+      where: { id: payment.clientId },
+      data: { trialUsed: true },
+    }).catch(() => {});
+  }
+
   const referral = await distributeReferralRewards(paymentId);
   const updated = await prisma.payment.findUnique({ where: { id: paymentId } });
   return {

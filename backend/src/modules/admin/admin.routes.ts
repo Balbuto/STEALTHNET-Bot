@@ -40,6 +40,14 @@ import { distributeReferralRewards } from "../referral/referral.service.js";
 import { markPaymentPaid } from "../payment/mark-paid.service.js";
 import { registerBackupRoutes } from "../backup/backup.routes.js";
 import { runBroadcast, getBroadcastRecipientsCount } from "../broadcast/broadcast.service.js";
+import {
+  notifyAdminsAboutSupportReply,
+  notifyAdminsAboutTicketStatusChange,
+} from "../notification/telegram-notify.service.js";
+import {
+  notifyAdminsAboutSupportReply,
+  notifyAdminsAboutTicketStatusChange,
+} from "../notification/telegram-notify.service.js";
 import { runRule, runAllRules, getEligibleClientIds } from "../auto-broadcast/auto-broadcast.service.js";
 
 export const adminRouter = Router();
@@ -232,6 +240,32 @@ adminRouter.get("/dashboard/stats", async (_req, res) => {
     },
   });
 });
+
+adminRouter.get("/notifications/counters", asyncRoute(async (_req, res) => {
+  const [totalClients, totalTickets, totalTariffPayments, totalBalanceTopups] = await Promise.all([
+    prisma.client.count(),
+    prisma.ticket.count(),
+    prisma.payment.count({
+      where: {
+        status: "PAID",
+        OR: [
+          { tariffId: { not: null } },
+          { proxyTariffId: { not: null } },
+          { singboxTariffId: { not: null } },
+        ],
+      },
+    }),
+    prisma.payment.count({
+      where: {
+        status: "PAID",
+        tariffId: null,
+        proxyTariffId: null,
+        singboxTariffId: null,
+      },
+    }),
+  ]);
+  return res.json({ totalClients, totalTickets, totalTariffPayments, totalBalanceTopups });
+}));
 
 /** Отметить платёж как оплаченный и начислить реферальные бонусы (3 уровня) */
 const paymentIdParamSchema = z.object({ id: z.string().min(1) });
@@ -510,7 +544,47 @@ adminRouter.get("/clients", async (req, res) => {
       }),
       prisma.client.count({ where: whereClause }),
     ]);
-    return res.json({ items: clients, total, page, limit });
+    let items = clients as (typeof clients)[number] & { activeNode?: string | null }[];
+
+    // Попробуем обогатить клиентов информацией об активной ноде Remna (если Remna настроен)
+    if (isRemnaConfigured()) {
+      const withRemna = clients.filter((c) => c.remnawaveUuid);
+      const map: Record<string, string | null> = {};
+      await Promise.all(
+        withRemna.map(async (c) => {
+          try {
+            const resRemna = await remnaGetUser(c.remnawaveUuid!);
+            if (resRemna.error || !resRemna.data) {
+              map[c.id] = null;
+              return;
+            }
+            const raw = resRemna.data as Record<string, unknown>;
+            const resp = (raw.response ?? raw) as Record<string, unknown>;
+            let label: string | null = null;
+            // Пытаемся вытащить имя активной ноды из возможных полей ответа Remna
+            if (typeof resp.activeNodeName === "string" && resp.activeNodeName.trim()) {
+              label = resp.activeNodeName.trim();
+            } else if (typeof resp.currentNodeName === "string" && resp.currentNodeName.trim()) {
+              label = resp.currentNodeName.trim();
+            } else if (Array.isArray(resp.activeInternalSquads)) {
+              const first = resp.activeInternalSquads[0] as { uuid?: string; name?: string } | string | undefined;
+              if (first && typeof first === "object") {
+                label = (first.name || first.uuid || "").trim() || null;
+              }
+            }
+            map[c.id] = label;
+          } catch {
+            map[c.id] = null;
+          }
+        })
+      );
+      items = clients.map((c) => ({
+        ...c,
+        activeNode: map[c.id] ?? null,
+      }));
+    }
+
+    return res.json({ items, total, page, limit });
   } catch (e) {
     console.error("GET /admin/clients error:", e);
     const msg = e instanceof Error ? e.message : String(e);
@@ -881,6 +955,7 @@ const updateSettingsSchema = z.object({
   googleAnalyticsId: z.string().max(100).nullable().optional(),
   yandexMetrikaId: z.string().max(100).nullable().optional(),
   autoBroadcastCron: z.string().max(100).nullable().optional(),
+  adminFrontNotificationsEnabled: z.boolean().optional(),
 });
 
 adminRouter.patch("/settings", async (req, res) => {
@@ -1232,6 +1307,14 @@ adminRouter.patch("/settings", async (req, res) => {
     const { restartAutoBroadcastScheduler } = await import("../auto-broadcast/auto-broadcast-scheduler.js");
     await restartAutoBroadcastScheduler();
   }
+  if (updates.adminFrontNotificationsEnabled !== undefined) {
+    const val = updates.adminFrontNotificationsEnabled ? "true" : "false";
+    await prisma.systemSetting.upsert({
+      where: { key: "admin_front_notifications_enabled" },
+      create: { key: "admin_front_notifications_enabled", value: val },
+      update: { value: val },
+    });
+  }
   const config = await getSystemConfig();
   return res.json(config);
 });
@@ -1284,7 +1367,14 @@ adminRouter.patch("/tickets/:id", asyncRoute(async (req, res) => {
   const ticket = await prisma.ticket.update({
     where: { id: req.params.id },
     data: { status: body.data.status },
+    select: { id: true, clientId: true, subject: true, status: true },
   });
+  notifyAdminsAboutTicketStatusChange({
+    ticketId: ticket.id,
+    clientId: ticket.clientId,
+    subject: ticket.subject,
+    status: ticket.status,
+  }).catch(() => {});
   return res.json({ id: ticket.id, status: ticket.status });
 }));
 
@@ -1298,6 +1388,11 @@ adminRouter.post("/tickets/:id/messages", asyncRoute(async (req, res) => {
     data: { ticketId: ticket.id, authorType: "support", content: body.data.content.trim() },
   });
   await prisma.ticket.update({ where: { id: ticket.id }, data: { updatedAt: new Date() } });
+  notifyAdminsAboutSupportReply({
+    ticketId: ticket.id,
+    clientId: ticket.clientId,
+    content: body.data.content.trim(),
+  }).catch(() => {});
   return res.status(201).json({ id: msg.id, authorType: msg.authorType, content: msg.content, createdAt: msg.createdAt.toISOString() });
 }));
 

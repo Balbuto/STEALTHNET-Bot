@@ -44,6 +44,19 @@ model SystemSetting {
   @@map("system_settings")
 }
 
+model AdminNotificationPreference {
+  id                String   @id @default(cuid())
+  telegramId        String   @unique @map("telegram_id")
+  notifyBalanceTopup Boolean @default(true) @map("notify_balance_topup")
+  notifyTariffPayment Boolean @default(true) @map("notify_tariff_payment")
+  notifyNewClient   Boolean  @default(true) @map("notify_new_client")
+  notifyNewTicket   Boolean  @default(true) @map("notify_new_ticket")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_notification_preferences")
+}
+
 // Клиент панели (покупатель подписок): сайт, бот, mini app
 model Client {
   id               String    @id @default(cuid())

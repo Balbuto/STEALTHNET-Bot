@@ -40,17 +40,28 @@ export function AdminTicketsPage() {
 
   const loadList = () => {
     if (!token) return;
-    setLoading(true);
     const status = filter === "open" || filter === "closed" ? filter : undefined;
     api
       .getAdminTickets(token, status)
-      .then((r) => setList(r.items))
-      .catch(() => setList([]))
-      .finally(() => setLoading(false));
+      .then((r) => {
+        setList(r.items);
+        setLoading(false);
+      })
+      .catch(() => {
+        setList([]);
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
+    if (!token) return;
+    setLoading(true);
     loadList();
+    const intervalId = window.setInterval(loadList, 10000);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, filter]);
 
   useEffect(() => {
@@ -58,12 +69,19 @@ export function AdminTicketsPage() {
       setDetail(null);
       return;
     }
-    setDetailLoading(true);
-    api
-      .getAdminTicket(token, detailId)
-      .then(setDetail)
-      .catch(() => setDetail(null))
-      .finally(() => setDetailLoading(false));
+    const loadDetail = () => {
+      setDetailLoading(true);
+      api
+        .getAdminTicket(token, detailId)
+        .then(setDetail)
+        .catch(() => setDetail(null))
+        .finally(() => setDetailLoading(false));
+    };
+    loadDetail();
+    const intervalId = window.setInterval(loadDetail, 10000);
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, [detailId, token]);
 
   const sendReply = () => {

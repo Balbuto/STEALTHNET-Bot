@@ -24,6 +24,7 @@ import { useClientAuth } from "@/contexts/client-auth";
 import { useCabinetConfig } from "@/contexts/cabinet-config";
 import { useCabinetMiniapp } from "@/pages/cabinet/cabinet-layout";
 import { api } from "@/lib/api";
+import { formatRuDays } from "@/lib/i18n";
 import type { ClientPayment, ClientReferralStats } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -371,7 +372,9 @@ export function ClientDashboardPage() {
             </div>
           ) : showTrial ? (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Получите бесплатный доступ на {trialDays} {trialDays === 1 ? "день" : "дня"}.</p>
+              <p className="text-sm text-muted-foreground">
+                Получите бесплатный доступ на {formatRuDays(trialDays)}.
+              </p>
               <Button className="w-full gap-2 bg-green-600 hover:bg-green-700" size="lg" onClick={activateTrial} disabled={trialLoading}>
                 {trialLoading ? <Loader2 className="h-5 w-5 shrink-0 animate-spin" /> : <Gift className="h-5 w-5 shrink-0" />}
                 Попробовать бесплатно
@@ -510,7 +513,7 @@ export function ClientDashboardPage() {
                 disabled={trialLoading}
               >
                 {trialLoading ? <Loader2 className="h-5 w-5 shrink-0 animate-spin" /> : <Gift className="h-5 w-5 shrink-0" />}
-                Попробовать бесплатно{trialDays > 0 ? ` (${trialDays} дн.)` : ""}
+                Попробовать бесплатно{trialDays > 0 ? ` (${formatRuDays(trialDays)})` : ""}
               </Button>
             ) : vpnUrl ? (
               <Button size="lg" className="inline-flex items-center gap-2 whitespace-nowrap" asChild>
@@ -559,7 +562,9 @@ export function ClientDashboardPage() {
           >
             <Gift className="h-6 w-6 text-green-600" />
             <span>Попробовать бесплатно</span>
-            <span className="text-xs font-normal text-muted-foreground">{trialDays > 0 ? `${trialDays} дней триала` : "Триал"}</span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {trialDays > 0 ? `${formatRuDays(trialDays)} триала` : "Триал"}
+            </span>
           </Button>
         ) : vpnUrl ? (
           <Button variant="outline" className="h-auto flex-col gap-2 py-4" asChild>
