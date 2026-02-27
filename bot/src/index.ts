@@ -35,6 +35,16 @@ import {
   type InnerEmojiIds,
 } from "./keyboard.js";
 
+function formatRuDays(n: number): string {
+  const abs = Math.abs(n);
+  const lastTwo = abs % 100;
+  const last = abs % 10;
+  if (lastTwo >= 11 && lastTwo <= 14) return `${n} дней`;
+  if (last === 1) return `${n} день`;
+  if (last >= 2 && last <= 4) return `${n} дня`;
+  return `${n} дней`;
+}
+
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (!BOT_TOKEN) {
   console.error("Set BOT_TOKEN in .env");
@@ -631,6 +641,7 @@ bot.on("callback_query:data", async (ctx) => {
       const markup: InlineMarkup = {
         inline_keyboard: [
           [{ text: "📊 Статистика", callback_data: "admin:stats" }],
+          [{ text: "🔔 Уведомления", callback_data: "admin:notifications" }],
           [{ text: "👥 Клиенты", callback_data: "admin:clients:1" }],
           [{ text: "🔍 Поиск пользователя", callback_data: "admin:search" }],
           [
@@ -642,6 +653,64 @@ bot.on("callback_query:data", async (ctx) => {
         ],
       };
       await editMessageContent(ctx, "⚙️ Панель админа\n\nВыберите раздел:", markup);
+      return;
+    }
+    if (data === "admin:notifications") {
+      const settings = await api.getBotAdminNotificationSettings(userId);
+      const s = settings;
+      const yesNo = (v: boolean) => (v ? "Вкл" : "Выкл");
+      const text =
+        "🔔 Настройки уведомлений\n\n" +
+        `Пополнение баланса: ${yesNo(s.notifyBalanceTopup)}\n` +
+        `Оплата тарифов: ${yesNo(s.notifyTariffPayment)}\n` +
+        `Новые клиенты: ${yesNo(s.notifyNewClient)}\n` +
+        `Новые тикеты: ${yesNo(s.notifyNewTicket)}\n\n` +
+        "Нажмите на пункт ниже, чтобы переключить.";
+      const markup: InlineMarkup = {
+        inline_keyboard: [
+          [{ text: `💰 Пополнение баланса: ${yesNo(s.notifyBalanceTopup)}`, callback_data: "admin:notif:balance" }],
+          [{ text: `📦 Оплата тарифов: ${yesNo(s.notifyTariffPayment)}`, callback_data: "admin:notif:tariff" }],
+          [{ text: `👤 Новые клиенты: ${yesNo(s.notifyNewClient)}`, callback_data: "admin:notif:newclient" }],
+          [{ text: `🎫 Новые тикеты: ${yesNo(s.notifyNewTicket)}`, callback_data: "admin:notif:newticket" }],
+          [{ text: "◀️ В админку", callback_data: "admin:menu" }],
+        ],
+      };
+      await editMessageContent(ctx, text, markup);
+      return;
+    }
+    if (data.startsWith("admin:notif:")) {
+      const kind = data.slice("admin:notif:".length);
+      const current = await api.getBotAdminNotificationSettings(userId);
+      const payload: Partial<api.BotAdminNotificationSettings> = {};
+      if (kind === "balance") {
+        payload.notifyBalanceTopup = !current.notifyBalanceTopup;
+      } else if (kind === "tariff") {
+        payload.notifyTariffPayment = !current.notifyTariffPayment;
+      } else if (kind === "newclient") {
+        payload.notifyNewClient = !current.notifyNewClient;
+      } else if (kind === "newticket") {
+        payload.notifyNewTicket = !current.notifyNewTicket;
+      }
+      const updated = await api.patchBotAdminNotificationSettings(userId, payload);
+      const s = updated;
+      const yesNo = (v: boolean) => (v ? "Вкл" : "Выкл");
+      const text =
+        "🔔 Настройки уведомлений\n\n" +
+        `Пополнение баланса: ${yesNo(s.notifyBalanceTopup)}\n` +
+        `Оплата тарифов: ${yesNo(s.notifyTariffPayment)}\n` +
+        `Новые клиенты: ${yesNo(s.notifyNewClient)}\n` +
+        `Новые тикеты: ${yesNo(s.notifyNewTicket)}\n\n` +
+        "Нажмите на пункт ниже, чтобы переключить.";
+      const markup: InlineMarkup = {
+        inline_keyboard: [
+          [{ text: `💰 Пополнение баланса: ${yesNo(s.notifyBalanceTopup)}`, callback_data: "admin:notif:balance" }],
+          [{ text: `📦 Оплата тарифов: ${yesNo(s.notifyTariffPayment)}`, callback_data: "admin:notif:tariff" }],
+          [{ text: `👤 Новые клиенты: ${yesNo(s.notifyNewClient)}`, callback_data: "admin:notif:newclient" }],
+          [{ text: `🎫 Новые тикеты: ${yesNo(s.notifyNewTicket)}`, callback_data: "admin:notif:newticket" }],
+          [{ text: "◀️ В админку", callback_data: "admin:menu" }],
+        ],
+      };
+      await editMessageContent(ctx, text, markup);
       return;
     }
     if (data === "admin:search") {
@@ -2014,7 +2083,8 @@ bot.on("callback_query:data", async (ctx) => {
 
     if (data === "menu:trial") {
       const days = config?.trialDays ?? 0;
-      const trialTitle = titleWithEmoji("TRIAL", `Попробовать бесплатно\n\n${days > 0 ? `${days} дней триала.` : "Триал без оплаты."}\n\nАктивировать?`, config?.botEmojis);
+      const daysText = days > 0 ? formatRuDays(days) + " триала." : "Триал без оплаты.";
+      const trialTitle = titleWithEmoji("TRIAL", `Попробовать бесплатно\n\n${daysText}\n\nАктивировать?`, config?.botEmojis);
       await editMessageContent(ctx, trialTitle.text, trialConfirmButton(innerStyles, innerEmojiIds), trialTitle.entities);
       return;
     }

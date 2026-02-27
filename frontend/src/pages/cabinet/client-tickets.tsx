@@ -36,17 +36,28 @@ export function ClientTicketsPage() {
 
   const loadList = () => {
     if (!token) return;
-    setLoading(true);
     setError(null);
     api
       .getTickets(token)
-      .then((r) => setList(r.items))
-      .catch((e) => setError(e instanceof Error ? e.message : "Ошибка загрузки"))
-      .finally(() => setLoading(false));
+      .then((r) => {
+        setList(r.items);
+        setLoading(false);
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : "Ошибка загрузки");
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
+    if (!token) return;
+    setLoading(true);
     loadList();
+    const intervalId = window.setInterval(loadList, 10000);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   useEffect(() => {
@@ -54,12 +65,19 @@ export function ClientTicketsPage() {
       setDetail(null);
       return;
     }
-    setDetailLoading(true);
-    api
-      .getTicket(token, detailId)
-      .then((t) => setDetail({ ...t, messages: t.messages }))
-      .catch(() => setDetail(null))
-      .finally(() => setDetailLoading(false));
+    const loadDetail = () => {
+      setDetailLoading(true);
+      api
+        .getTicket(token, detailId)
+        .then((t) => setDetail({ ...t, messages: t.messages }))
+        .catch(() => setDetail(null))
+        .finally(() => setDetailLoading(false));
+    };
+    loadDetail();
+    const intervalId = window.setInterval(loadDetail, 10000);
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, [detailId, token]);
 
   const sendReply = () => {

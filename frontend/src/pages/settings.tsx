@@ -415,6 +415,27 @@ export function SettingsPage() {
                     </div>
                   </div>
                 </div>
+                <div className="space-y-3 rounded-lg border p-4 bg-muted/20">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="admin-front-notifications"
+                      checked={settings.adminFrontNotificationsEnabled ?? true}
+                      onCheckedChange={(checked) =>
+                        setSettings((s) =>
+                          s ? { ...s, adminFrontNotificationsEnabled: checked === true } : s
+                        )
+                      }
+                    />
+                    <div>
+                      <Label htmlFor="admin-front-notifications" className="text-base font-medium cursor-pointer">
+                        Всплывающие уведомления в админке
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Короткие уведомления о новых регистрациях, пополнениях, оплатах и тикетах в панели администратора.
+                      </p>
+                    </div>
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <Label>Название сервиса</Label>
                   <Input

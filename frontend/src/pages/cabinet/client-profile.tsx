@@ -474,8 +474,8 @@ export function ClientProfilePage() {
               className="gap-2"
               onClick={() => {
                 const amount = Number(topUpAmount?.replace(",", "."));
-                if (!Number.isFinite(amount) || amount <= 0) {
-                  setTopUpError("Укажите сумму");
+                if (!Number.isFinite(amount) || amount < 1) {
+                  setTopUpError("Минимальная сумма пополнения — 1");
                   return;
                 }
                 setTopUpError(null);

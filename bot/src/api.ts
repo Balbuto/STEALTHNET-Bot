@@ -274,6 +274,13 @@ export type BotAdminStats = {
   };
 };
 
+export type BotAdminNotificationSettings = {
+  notifyBalanceTopup: boolean;
+  notifyTariffPayment: boolean;
+  notifyNewClient: boolean;
+  notifyNewTicket: boolean;
+};
+
 export async function getBotAdminStats(telegramId: number): Promise<BotAdminStats> {
   const botToken = process.env.BOT_TOKEN || "";
   const res = await fetch(`${API_URL}${BOT_ADMIN_BASE}/stats?telegramId=${telegramId}`, {
@@ -285,6 +292,37 @@ export async function getBotAdminStats(telegramId: number): Promise<BotAdminStat
     throw new Error(msg);
   }
   return data as BotAdminStats;
+}
+
+export async function getBotAdminNotificationSettings(telegramId: number): Promise<BotAdminNotificationSettings> {
+  const botToken = process.env.BOT_TOKEN || "";
+  const res = await fetch(`${API_URL}${BOT_ADMIN_BASE}/notification-settings?telegramId=${telegramId}`, {
+    headers: { "X-Telegram-Bot-Token": botToken },
+  });
+  const data = (await res.json().catch(() => ({}))) as BotAdminNotificationSettings | { message?: string };
+  if (!res.ok) {
+    const msg = typeof (data as { message?: string }).message === "string" ? (data as { message: string }).message : `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+  return data as BotAdminNotificationSettings;
+}
+
+export async function patchBotAdminNotificationSettings(
+  telegramId: number,
+  settings: Partial<BotAdminNotificationSettings>
+): Promise<BotAdminNotificationSettings> {
+  const botToken = process.env.BOT_TOKEN || "";
+  const res = await fetch(`${API_URL}${BOT_ADMIN_BASE}/notification-settings`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Telegram-Bot-Token": botToken },
+    body: JSON.stringify({ telegramId, ...settings }),
+  });
+  const data = (await res.json().catch(() => ({}))) as BotAdminNotificationSettings | { message?: string };
+  if (!res.ok) {
+    const msg = typeof (data as { message?: string }).message === "string" ? (data as { message: string }).message : `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+  return data as BotAdminNotificationSettings;
 }
 
 export type BotAdminClientItem = {

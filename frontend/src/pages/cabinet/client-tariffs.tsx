@@ -4,6 +4,7 @@ import { Package, Calendar, Wifi, Smartphone, CreditCard, Loader2, Gift, Tag, Ch
 import { useClientAuth } from "@/contexts/client-auth";
 import { api } from "@/lib/api";
 import type { PublicTariffCategory } from "@/lib/api";
+import { formatRuDays } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -254,7 +255,9 @@ export function ClientTariffsPage() {
               <div>
                 <p className="font-semibold">Попробовать бесплатно</p>
                 <p className="text-sm text-muted-foreground">
-                  {trialConfig.trialDays > 0 ? `${trialConfig.trialDays} дней триала без оплаты` : "Триал без оплаты"}
+                  {trialConfig.trialDays > 0
+                    ? `${formatRuDays(trialConfig.trialDays)} триала без оплаты`
+                    : "Триал без оплаты"}
                 </p>
               </div>
             </div>

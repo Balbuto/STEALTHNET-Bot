@@ -136,6 +136,10 @@ export const api = {
     return request("/admin/dashboard/stats", { token });
   },
 
+  async getAdminNotificationCounters(token: string): Promise<AdminNotificationCounters> {
+    return request("/admin/notifications/counters", { token });
+  },
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async getAnalytics(token: string): Promise<any> {
     return request("/admin/analytics", { token });
@@ -1062,6 +1066,7 @@ export type UpdateSettingsPayload = {
   googleAnalyticsId?: string | null;
   yandexMetrikaId?: string | null;
   autoBroadcastCron?: string | null;
+  adminFrontNotificationsEnabled?: boolean;
 };
 
 export interface ClientRecord {
@@ -1081,6 +1086,8 @@ export interface ClientRecord {
   createdAt: string;
   /** Количество приглашённых рефералов (приходит с бэкенда) */
   _count?: { referrals: number };
+  /** Активная нода Remna (если есть) */
+  activeNode?: string | null;
 }
 
 export type UpdateClientPayload = {
@@ -1181,6 +1188,8 @@ export interface AdminSettings {
   yandexMetrikaId?: string | null;
   /** Расписание авто-рассылки (cron, например "0 9 * * *" = 9:00 каждый день). Пусто = по умолчанию 9:00. */
   autoBroadcastCron?: string | null;
+  /** Фронтовые всплывающие уведомления в панели админа включены */
+  adminFrontNotificationsEnabled?: boolean;
 }
 
 /** Конфиг страницы подписки (формат как sub.stealthnet.app) */
@@ -1225,6 +1234,13 @@ export interface DashboardStats {
     last30DaysAmount: number;
     last30DaysCount: number;
   };
+}
+
+export interface AdminNotificationCounters {
+  totalClients: number;
+  totalTickets: number;
+  totalTariffPayments: number;
+  totalBalanceTopups: number;
 }
 
 export interface RemnaNode {

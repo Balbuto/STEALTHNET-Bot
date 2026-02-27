@@ -83,6 +83,73 @@ async function requireBotAdmin(req: Request, res: Response): Promise<{ telegramI
   return { telegramId };
 }
 
+const notificationSettingsSchema = z.object({
+  notifyBalanceTopup: z.boolean().optional(),
+  notifyTariffPayment: z.boolean().optional(),
+  notifyNewClient: z.boolean().optional(),
+  notifyNewTicket: z.boolean().optional(),
+});
+
+botAdminRouter.get("/notification-settings", async (req, res) => {
+  const admin = await requireBotAdmin(req, res);
+  if (!admin) return;
+  const telegramId = String(admin.telegramId);
+  const prefs = await prisma.adminNotificationPreference.findUnique({
+    where: { telegramId },
+  });
+  const payload = {
+    notifyBalanceTopup: prefs?.notifyBalanceTopup ?? true,
+    notifyTariffPayment: prefs?.notifyTariffPayment ?? true,
+    notifyNewClient: prefs?.notifyNewClient ?? true,
+    notifyNewTicket: prefs?.notifyNewTicket ?? true,
+  };
+  return res.json(payload);
+});
+
+botAdminRouter.patch("/notification-settings", async (req, res) => {
+  const admin = await requireBotAdmin(req, res);
+  if (!admin) return;
+  const parsed = notificationSettingsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ message: "Invalid input", errors: parsed.error.flatten() });
+  }
+  const telegramId = String(admin.telegramId);
+  const data = parsed.data;
+  const existing = await prisma.adminNotificationPreference.findUnique({ where: { telegramId } });
+  if (!existing) {
+    const created = await prisma.adminNotificationPreference.create({
+      data: {
+        telegramId,
+        notifyBalanceTopup: data.notifyBalanceTopup ?? true,
+        notifyTariffPayment: data.notifyTariffPayment ?? true,
+        notifyNewClient: data.notifyNewClient ?? true,
+        notifyNewTicket: data.notifyNewTicket ?? true,
+      },
+    });
+    return res.json({
+      notifyBalanceTopup: created.notifyBalanceTopup,
+      notifyTariffPayment: created.notifyTariffPayment,
+      notifyNewClient: created.notifyNewClient,
+      notifyNewTicket: created.notifyNewTicket,
+    });
+  }
+  const update: Record<string, unknown> = {};
+  if (data.notifyBalanceTopup !== undefined) update.notifyBalanceTopup = data.notifyBalanceTopup;
+  if (data.notifyTariffPayment !== undefined) update.notifyTariffPayment = data.notifyTariffPayment;
+  if (data.notifyNewClient !== undefined) update.notifyNewClient = data.notifyNewClient;
+  if (data.notifyNewTicket !== undefined) update.notifyNewTicket = data.notifyNewTicket;
+  const updated = await prisma.adminNotificationPreference.update({
+    where: { telegramId },
+    data: update,
+  });
+  return res.json({
+    notifyBalanceTopup: updated.notifyBalanceTopup,
+    notifyTariffPayment: updated.notifyTariffPayment,
+    notifyNewClient: updated.notifyNewClient,
+    notifyNewTicket: updated.notifyNewTicket,
+  });
+});
+
 /** GET /api/bot-admin/stats — статистика дашборда */
 botAdminRouter.get("/stats", async (req, res) => {
   const admin = await requireBotAdmin(req, res);

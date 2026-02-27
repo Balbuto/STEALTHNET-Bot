@@ -312,6 +312,7 @@ export async function getSystemConfig() {
     googleAnalyticsId: (map.google_analytics_id ?? "").trim() || null,
     yandexMetrikaId: (map.yandex_metrika_id ?? "").trim() || null,
     autoBroadcastCron: (map.auto_broadcast_cron ?? "").trim() || null,
+    adminFrontNotificationsEnabled: map.admin_front_notifications_enabled === "true" || map.admin_front_notifications_enabled === "1",
   };
 }
 
