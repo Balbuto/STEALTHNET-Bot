@@ -60,7 +60,7 @@ export async function getPublicConfig(): Promise<{
   plategaMethods?: { id: number; label: string }[];
   yoomoneyEnabled?: boolean;
   yookassaEnabled?: boolean;
-  botButtons?: { id: string; visible: boolean; label: string; order: number; style?: string; iconCustomEmojiId?: string; onePerRow?: boolean }[] | null;
+  botButtons?: { id: string; visible: boolean; label: string; order: number; style?: string; iconCustomEmojiId?: string; onePerRow?: boolean; emojiKey?: string }[] | null;
   /** Кнопок в ряд в главном меню: 1 или 2 */
   botButtonsPerRow?: 1 | 2;
   /** Тексты меню с уже подставленными эмодзи ({{BALANCE}} → unicode из bot_emojis) */
@@ -71,7 +71,11 @@ export async function getPublicConfig(): Promise<{
   botEmojis?: Record<string, { unicode?: string; tgEmojiId?: string }>;
   botBackLabel?: string | null;
   botMenuTexts?: Record<string, string> | null;
+  botMenuLineVisibility?: Record<string, boolean> | null;
   botInnerButtonStyles?: Record<string, string> | null;
+  botTariffsText?: string | null;
+  botTariffsFields?: Record<string, boolean> | null;
+  botPaymentText?: string | null;
   activeLanguages?: string[];
   activeCurrencies?: string[];
   defaultReferralPercent?: number;
@@ -175,7 +179,7 @@ export async function getPublicTariffs(): Promise<{
     name: string;
     emojiKey: string | null;
     emoji: string;
-    tariffs: { id: string; name: string; price: number; currency: string }[];
+    tariffs: { id: string; name: string; description?: string | null; durationDays: number; trafficLimitBytes?: number | null; deviceLimit?: number | null; price: number; currency: string }[];
   }[];
 }> {
   return fetchJson("/api/public/tariffs");
