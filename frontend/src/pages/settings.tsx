@@ -66,6 +66,7 @@ const DEFAULT_BOT_MENU_TEXTS: Record<string, string> = {
 };
 
 const DEFAULT_BOT_TARIFFS_TEXT = "Тарифы\n\n{{CATEGORY}}\n{{TARIFFS}}\n\nВыберите тариф для оплаты:";
+const DEFAULT_BOT_PAYMENT_TEXT = "Оплата: {{NAME}} — {{PRICE}}\n\n{{ACTION}}";
 
 const DEFAULT_BOT_TARIFF_FIELDS: Record<string, boolean> = {
   name: true,
@@ -185,6 +186,7 @@ export function SettingsPage() {
         botMenuLineVisibility: { ...DEFAULT_BOT_MENU_LINE_VISIBILITY, ...((data as AdminSettings).botMenuLineVisibility ?? {}) },
         botTariffsText: (data as AdminSettings).botTariffsText ?? DEFAULT_BOT_TARIFFS_TEXT,
         botTariffsFields: { ...DEFAULT_BOT_TARIFF_FIELDS, ...((data as AdminSettings).botTariffsFields ?? {}) },
+        botPaymentText: (data as AdminSettings).botPaymentText ?? DEFAULT_BOT_PAYMENT_TEXT,
         botInnerButtonStyles: (() => {
           const raw = (data as AdminSettings).botInnerButtonStyles;
           const loaded =
@@ -355,6 +357,7 @@ export function SettingsPage() {
         botMenuLineVisibility: settings.botMenuLineVisibility != null ? JSON.stringify(settings.botMenuLineVisibility) : undefined,
         botTariffsText: settings.botTariffsText ?? undefined,
         botTariffsFields: settings.botTariffsFields != null ? JSON.stringify(settings.botTariffsFields) : undefined,
+        botPaymentText: settings.botPaymentText ?? undefined,
         botInnerButtonStyles: JSON.stringify({
           ...DEFAULT_BOT_INNER_STYLES,
           ...(settings.botInnerButtonStyles ?? {}),
@@ -1170,7 +1173,7 @@ export function SettingsPage() {
                     <Label className="text-base font-medium">Экран тарифов</Label>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Текст, который видит пользователь в разделе «Тарифы». Используйте плейсхолдеры: <code className="rounded bg-muted px-1">{'{{CATEGORY}}'}</code> — название категории, <code className="rounded bg-muted px-1">{'{{TARIFFS}}'}</code> — список тарифов.
+                    Текст, который видит пользователь в разделе «Тарифы». Используйте плейсхолдеры: <code className="rounded bg-muted px-1">{'{{CATEGORY}}'}</code> — название категории, <code className="rounded bg-muted px-1">{'{{TARIFFS}}'}</code> — список тарифов. Для эмодзи — ключи из блока «Эмодзи», например <code className="rounded bg-muted px-1">{'{{CUSTOM_1}}'}</code>.
                   </p>
                   <div className="space-y-1">
                     <Label className="text-xs">Текст сообщения</Label>
@@ -1214,6 +1217,24 @@ export function SettingsPage() {
                         <Label className="text-xs">{BOT_TARIFF_FIELD_LABELS[key] ?? key}</Label>
                       </div>
                     ))}
+                  </div>
+                </div>
+                <div className="space-y-3 rounded-lg border p-4 bg-muted/20">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-primary" />
+                    <Label className="text-base font-medium">Окно оплаты</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Текст окна «Оплата». Плейсхолдеры: <code className="rounded bg-muted px-1">{'{{NAME}}'}</code> — название тарифа/опции, <code className="rounded bg-muted px-1">{'{{PRICE}}'}</code> — цена с валютой, <code className="rounded bg-muted px-1">{'{{AMOUNT}}'}</code> — число, <code className="rounded bg-muted px-1">{'{{CURRENCY}}'}</code> — валюта, <code className="rounded bg-muted px-1">{'{{ACTION}}'}</code> — строка действия. Для эмодзи — ключи из блока «Эмодзи», например <code className="rounded bg-muted px-1">{'{{CUSTOM_1}}'}</code>.
+                  </p>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Текст сообщения</Label>
+                    <Textarea
+                      rows={5}
+                      value={settings.botPaymentText ?? DEFAULT_BOT_PAYMENT_TEXT}
+                      onChange={(e) => setSettings((s) => (s ? { ...s, botPaymentText: e.target.value } : s))}
+                      placeholder={DEFAULT_BOT_PAYMENT_TEXT}
+                    />
                   </div>
                 </div>
                 <div className="space-y-3 rounded-lg border p-4 bg-muted/20">

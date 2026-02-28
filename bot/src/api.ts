@@ -75,6 +75,7 @@ export async function getPublicConfig(): Promise<{
   botInnerButtonStyles?: Record<string, string> | null;
   botTariffsText?: string | null;
   botTariffsFields?: Record<string, boolean> | null;
+  botPaymentText?: string | null;
   activeLanguages?: string[];
   activeCurrencies?: string[];
   defaultReferralPercent?: number;

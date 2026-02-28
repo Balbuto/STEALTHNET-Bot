@@ -935,6 +935,7 @@ const updateSettingsSchema = z.object({
   botInnerButtonStyles: z.union([z.string().max(2000), z.record(z.string())]).nullable().optional(),
   botTariffsText: z.string().max(8000).nullable().optional(),
   botTariffsFields: z.union([z.string().max(2000), z.record(z.boolean())]).nullable().optional(),
+  botPaymentText: z.string().max(8000).nullable().optional(),
   subscriptionPageConfig: z.string().max(500000).nullable().optional(),
   supportLink: z.string().max(2000).nullable().optional(),
   agreementLink: z.string().max(2000).nullable().optional(),
@@ -1258,6 +1259,14 @@ adminRouter.patch("/settings", async (req, res) => {
     await prisma.systemSetting.upsert({
       where: { key: "bot_tariffs_fields" },
       create: { key: "bot_tariffs_fields", value: val },
+      update: { value: val },
+    });
+  }
+  if (updates.botPaymentText !== undefined) {
+    const val = updates.botPaymentText ?? "";
+    await prisma.systemSetting.upsert({
+      where: { key: "bot_payment_text" },
+      create: { key: "bot_payment_text", value: val },
       update: { value: val },
     });
   }

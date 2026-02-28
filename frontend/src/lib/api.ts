@@ -1050,6 +1050,7 @@ export type UpdateSettingsPayload = {
   botInnerButtonStyles?: string | null;
   botTariffsText?: string | null;
   botTariffsFields?: string | null;
+  botPaymentText?: string | null;
   subscriptionPageConfig?: string | null;
   supportLink?: string | null;
   agreementLink?: string | null;
@@ -1171,6 +1172,8 @@ export interface AdminSettings {
   botTariffsText?: string | null;
   /** Какие поля показывать в строке тарифа */
   botTariffsFields?: Record<string, boolean> | null;
+  /** Текст окна оплаты в боте */
+  botPaymentText?: string | null;
   /** JSON конфиг страницы подписки (приложения, тексты) */
   subscriptionPageConfig?: string | null;
   /** Ссылки раздела «Поддержка» в боте (если пусто — кнопка не показывается) */

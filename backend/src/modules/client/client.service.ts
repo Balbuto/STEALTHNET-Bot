@@ -50,7 +50,7 @@ const SYSTEM_CONFIG_KEYS = [
   "yoomoney_client_id", "yoomoney_client_secret", "yoomoney_receiver_wallet", "yoomoney_notification_secret",
   "yookassa_shop_id", "yookassa_secret_key",
   "bot_buttons", "bot_buttons_per_row", "bot_back_label", "bot_menu_texts", "bot_menu_line_visibility", "bot_inner_button_styles",
-  "bot_tariffs_text", "bot_tariffs_fields",
+  "bot_tariffs_text", "bot_tariffs_fields", "bot_payment_text",
   "bot_emojis", // JSON: { "TRIAL": { "unicode": "🎁", "tgEmojiId": "..." }, "PACKAGE": ... } — эмодзи кнопок/текста, TG ID для премиум
   "category_emojis", // JSON: { "ordinary": "📦", "premium": "⭐" } — эмодзи категорий по коду
   "subscription_page_config",
@@ -146,6 +146,7 @@ export type BotTariffLineFields = {
 };
 
 const DEFAULT_BOT_TARIFFS_TEXT = "Тарифы\n\n{{CATEGORY}}\n{{TARIFFS}}\n\nВыберите тариф для оплаты:";
+const DEFAULT_BOT_PAYMENT_TEXT = "Оплата: {{NAME}} — {{PRICE}}\n\n{{ACTION}}";
 
 const DEFAULT_BOT_TARIFF_LINE_FIELDS: Required<BotTariffLineFields> = {
   name: true,
@@ -238,6 +239,11 @@ function parseBotMenuTexts(raw: string | undefined): Required<BotMenuTexts> {
 
 function parseBotTariffsText(raw: string | undefined): string {
   if (!raw || !raw.trim()) return DEFAULT_BOT_TARIFFS_TEXT;
+  return raw;
+}
+
+function parseBotPaymentText(raw: string | undefined): string {
+  if (!raw || !raw.trim()) return DEFAULT_BOT_PAYMENT_TEXT;
   return raw;
 }
 
@@ -381,6 +387,7 @@ export async function getSystemConfig() {
     botInnerButtonStyles: parseBotInnerButtonStyles(map.bot_inner_button_styles),
     botTariffsText: parseBotTariffsText(map.bot_tariffs_text),
     botTariffsFields: parseBotTariffLineFields(map.bot_tariffs_fields),
+    botPaymentText: parseBotPaymentText(map.bot_payment_text),
     categoryEmojis: parseCategoryEmojis(map.category_emojis),
     subscriptionPageConfig: map.subscription_page_config ?? null,
     supportLink: (map.support_link ?? "").trim() || null,
@@ -597,6 +604,7 @@ export async function getPublicConfig() {
     botInnerButtonStyles: full.botInnerButtonStyles ?? DEFAULT_BOT_INNER_BUTTON_STYLES,
     botTariffsText: full.botTariffsText ?? DEFAULT_BOT_TARIFFS_TEXT,
     botTariffsFields: full.botTariffsFields ?? DEFAULT_BOT_TARIFF_LINE_FIELDS,
+    botPaymentText: full.botPaymentText ?? DEFAULT_BOT_PAYMENT_TEXT,
     categoryEmojis: full.categoryEmojis,
     defaultReferralPercent: full.defaultReferralPercent ?? 0,
     referralPercentLevel2: full.referralPercentLevel2 ?? 0,
