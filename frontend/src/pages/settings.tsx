@@ -465,7 +465,7 @@ export function SettingsPage() {
                     <Switch
                       id="tickets-enabled-general"
                       checked={!!settings.ticketsEnabled}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={(checked: boolean) =>
                         setSettings((s) => (s ? { ...s, ticketsEnabled: checked === true } : s))
                       }
                     />
@@ -482,7 +482,7 @@ export function SettingsPage() {
                     <Switch
                       id="admin-front-notifications"
                       checked={settings.adminFrontNotificationsEnabled ?? true}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={(checked: boolean) =>
                         setSettings((s) =>
                           s ? { ...s, adminFrontNotificationsEnabled: checked === true } : s
                         )
@@ -934,7 +934,7 @@ export function SettingsPage() {
                         <div key={btn.id} className="flex flex-wrap items-center gap-3 p-3 rounded-lg border bg-muted/30">
                           <Switch
                             checked={btn.visible}
-                            onCheckedChange={(checked) =>
+                            onCheckedChange={(checked: boolean) =>
                               setSettings((s) => {
                                 if (!s?.botButtons) return s;
                                 return {
@@ -1027,7 +1027,7 @@ export function SettingsPage() {
                             <Switch
                               id={`onePerRow-${btn.id}`}
                               checked={btn.onePerRow === true}
-                              onCheckedChange={(checked) =>
+                              onCheckedChange={(checked: boolean) =>
                                 setSettings((s) => {
                                   if (!s?.botButtons) return s;
                                   return {
@@ -1115,7 +1115,7 @@ export function SettingsPage() {
                             <div key={key} className="flex items-center gap-2">
                               <Switch
                                 checked={(settings.botMenuLineVisibility ?? DEFAULT_BOT_MENU_LINE_VISIBILITY)[key] !== false}
-                                onCheckedChange={(checked) =>
+                                onCheckedChange={(checked: boolean) =>
                                   setSettings((s) =>
                                     s
                                       ? {
@@ -1202,7 +1202,7 @@ export function SettingsPage() {
                       <div key={key} className="flex items-center gap-2">
                         <Switch
                           checked={(settings.botTariffsFields ?? DEFAULT_BOT_TARIFF_FIELDS)[key] !== false}
-                          onCheckedChange={(checked) =>
+                          onCheckedChange={(checked: boolean) =>
                             setSettings((s) =>
                               s
                                 ? {
@@ -1250,7 +1250,7 @@ export function SettingsPage() {
                   <div className="flex items-center gap-3">
                     <Switch
                       checked={!!settings.forceSubscribeEnabled}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={(checked: boolean) =>
                         setSettings((s) => (s ? { ...s, forceSubscribeEnabled: checked === true } : s))
                       }
                     />
@@ -1527,7 +1527,7 @@ export function SettingsPage() {
                             <Switch
                               id={`platega-method-${m.id}`}
                               checked={m.enabled}
-                              onCheckedChange={(checked) =>
+                              onCheckedChange={(checked: boolean) =>
                                 setSettings((s) =>
                                   s
                                     ? {
@@ -1929,7 +1929,7 @@ export function SettingsPage() {
                 </div>
                 <Switch
                   checked={Boolean((settings as any)?.allowUserThemeChange ?? true)}
-                  onCheckedChange={(c) => setSettings((s) => s ? { ...s, allowUserThemeChange: c } : s)}
+                  onCheckedChange={(c: boolean) => setSettings((s) => s ? { ...s, allowUserThemeChange: c } : s)}
                 />
               </div>
               <CardTitle className="flex items-center gap-2">
@@ -2009,7 +2009,7 @@ export function SettingsPage() {
                 <Switch
                   id="sell-options-enabled"
                   checked={settings.sellOptionsEnabled ?? false}
-                  onCheckedChange={(c) => setSettings((s) => (s ? { ...s, sellOptionsEnabled: !!c } : s))}
+                  onCheckedChange={(c: boolean) => setSettings((s) => (s ? { ...s, sellOptionsEnabled: !!c } : s))}
                 />
                 <Label htmlFor="sell-options-enabled" className="cursor-pointer">Включить продажу опций</Label>
               </div>
@@ -2024,7 +2024,7 @@ export function SettingsPage() {
                     <Switch
                       id="sell-traffic-enabled"
                       checked={settings.sellOptionsTrafficEnabled ?? false}
-                      onCheckedChange={(c) => setSettings((s) => (s ? { ...s, sellOptionsTrafficEnabled: !!c } : s))}
+                      onCheckedChange={(c: boolean) => setSettings((s) => (s ? { ...s, sellOptionsTrafficEnabled: !!c } : s))}
                     />
                     <Label htmlFor="sell-traffic-enabled" className="cursor-pointer">Включить</Label>
                   </div>
@@ -2074,7 +2074,7 @@ export function SettingsPage() {
                     <Switch
                       id="sell-devices-enabled"
                       checked={settings.sellOptionsDevicesEnabled ?? false}
-                      onCheckedChange={(c) => setSettings((s) => (s ? { ...s, sellOptionsDevicesEnabled: !!c } : s))}
+                      onCheckedChange={(c: boolean) => setSettings((s) => (s ? { ...s, sellOptionsDevicesEnabled: !!c } : s))}
                     />
                     <Label htmlFor="sell-devices-enabled" className="cursor-pointer">Включить</Label>
                   </div>
@@ -2124,7 +2124,7 @@ export function SettingsPage() {
                     <Switch
                       id="sell-servers-enabled"
                       checked={settings.sellOptionsServersEnabled ?? false}
-                      onCheckedChange={(c) => setSettings((s) => (s ? { ...s, sellOptionsServersEnabled: !!c } : s))}
+                      onCheckedChange={(c: boolean) => setSettings((s) => (s ? { ...s, sellOptionsServersEnabled: !!c } : s))}
                     />
                     <Label htmlFor="sell-servers-enabled" className="cursor-pointer">Включить</Label>
                   </div>
