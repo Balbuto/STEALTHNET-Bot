@@ -65,7 +65,24 @@ const MODE_OPTIONS: { value: ThemeMode; icon: typeof Sun; label: string }[] = [
 
 function ThemePopover() {
   const [show, setShow] = useState(false);
-  const { config: themeConfig, setMode, setAccent, allowUserThemeChange } = useTheme();
+  const { config: themeConfig, setMode, setAccent, resolvedMode, allowUserThemeChange } = useTheme();
+
+  // Если смена темы запрещена — просто кнопка солнышко/луна без дропдауна
+  if (!allowUserThemeChange) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 w-8 p-0 bg-background/20 hover:bg-background/40 transition-all duration-300"
+        onClick={() => setMode(resolvedMode === "dark" ? "light" : "dark")}
+      >
+        <span className="relative h-4 w-4">
+          <Sun className={cn("absolute inset-0 h-4 w-4 transition-all duration-500", resolvedMode === "dark" ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-0 opacity-0")} />
+          <Moon className={cn("absolute inset-0 h-4 w-4 transition-all duration-500", resolvedMode === "light" ? "rotate-0 scale-100 opacity-100" : "rotate-90 scale-0 opacity-0")} />
+        </span>
+      </Button>
+    );
+  }
 
   return (
     <div className="relative">

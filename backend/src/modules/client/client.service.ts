@@ -58,6 +58,7 @@ const SYSTEM_CONFIG_KEYS = [
   "tickets_enabled", // Тикет-система: true/false
   "admin_front_notifications_enabled", // Всплывающие уведомления в админке: true/false
   "theme_accent", // Глобальная цветовая тема: default, blue, violet, rose, orange, green, emerald, cyan, amber, red, pink, indigo
+  "allow_user_theme_change", // Разрешить пользователям менять тему: true/false
   "force_subscribe_enabled", "force_subscribe_channel_id", "force_subscribe_message", // Принудительная подписка на канал/группу
   // Продажа опций: доп. трафик, доп. устройства, доп. серверы (сквады)
   "sell_options_enabled", "sell_options_traffic_enabled", "sell_options_traffic_products",

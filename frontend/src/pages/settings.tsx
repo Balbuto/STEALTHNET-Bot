@@ -1929,14 +1929,7 @@ export function SettingsPage() {
                 </div>
                 <Switch
                   checked={Boolean((settings as any)?.allowUserThemeChange ?? true)}
-                  onCheckedChange={async (c) => {
-                    setSettings((s) => s ? { ...s, allowUserThemeChange: c } : s);
-                    if (state.accessToken) {
-                      try {
-                        await api.updateSettings(state.accessToken, { allowUserThemeChange: c });
-                      } catch (e) { console.error(e); }
-                    }
-                  }}
+                  onCheckedChange={(c) => setSettings((s) => s ? { ...s, allowUserThemeChange: c } : s)}
                 />
               </div>
               <CardTitle className="flex items-center gap-2">
@@ -1986,7 +1979,7 @@ export function SettingsPage() {
                   onClick={() => {
                     setSaving(true);
                     setMessage("");
-                    api.updateSettings(token, { themeAccent: settings.themeAccent ?? "default" })
+                    api.updateSettings(token, { themeAccent: settings.themeAccent ?? "default", allowUserThemeChange: (settings as any).allowUserThemeChange ?? true })
                       .then(() => setMessage("Тема сохранена"))
                       .catch(() => setMessage("Ошибка сохранения"))
                       .finally(() => setSaving(false));

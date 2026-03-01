@@ -62,7 +62,7 @@ export function AnimatedBackground() {
       const g = Math.min(255, Math.max(0, rgb.g + (i % 2 === 0 ? 20 : -30)));
       const b = Math.min(255, Math.max(0, rgb.b + (i % 4 === 0 ? 40 : -10)));
       
-      const alphaCenter = isDark ? "0.4" : "0.25";
+      const alphaCenter = isDark ? "0.5" : "0.3";
       const alphaEdge = "0.0";
       
       return {
@@ -77,6 +77,9 @@ export function AnimatedBackground() {
       const W = canvas.width;
       const H = canvas.height;
 
+      // Масштаб относительно экрана: на десктопе (1440px) = 1, на мобилке (~400px) ≈ 0.55
+      const scale = Math.max(0.45, Math.min(W, H) / 1000);
+
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, W, H);
@@ -86,15 +89,18 @@ export function AnimatedBackground() {
         const colors = orbColors[i];
         
         const phase = (t / o.dur) * Math.PI * 2;
-        const cx = (o.x * W) + Math.sin(phase) * o.dx;
-        const cy = (o.y * H) + Math.cos(phase * 0.7) * o.dy;
+        const scaledDx = o.dx * scale;
+        const scaledDy = o.dy * scale;
+        const scaledR = o.r * scale;
+        const cx = (o.x * W) + Math.sin(phase) * scaledDx;
+        const cy = (o.y * H) + Math.cos(phase * 0.7) * scaledDy;
 
-        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, o.r);
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, scaledR);
         grad.addColorStop(0, colors.center);
         grad.addColorStop(1, colors.edge);
 
         ctx.beginPath();
-        ctx.arc(cx, cy, o.r, 0, Math.PI * 2);
+        ctx.arc(cx, cy, scaledR, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
       }
