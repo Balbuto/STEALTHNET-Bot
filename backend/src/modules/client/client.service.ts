@@ -58,6 +58,7 @@ const SYSTEM_CONFIG_KEYS = [
   "tickets_enabled", // Тикет-система: true/false
   "admin_front_notifications_enabled", // Всплывающие уведомления в админке: true/false
   "theme_accent", // Глобальная цветовая тема: default, blue, violet, rose, orange, green, emerald, cyan, amber, red, pink, indigo
+  "allow_user_theme_change", // Разрешить пользователям менять тему: true/false
   "force_subscribe_enabled", "force_subscribe_channel_id", "force_subscribe_message", // Принудительная подписка на канал/группу
   // Продажа опций: доп. трафик, доп. устройства, доп. серверы (сквады)
   "sell_options_enabled", "sell_options_traffic_enabled", "sell_options_traffic_products",
@@ -396,6 +397,7 @@ export async function getSystemConfig() {
     instructionsLink: (map.instructions_link ?? "").trim() || null,
     ticketsEnabled: map.tickets_enabled === "true" || map.tickets_enabled === "1",
     themeAccent: (map.theme_accent ?? "").trim() || "default",
+    allowUserThemeChange: map.allow_user_theme_change === "true" || map.allow_user_theme_change === "1" || map.allow_user_theme_change == null,
     forceSubscribeEnabled: map.force_subscribe_enabled === "true" || map.force_subscribe_enabled === "1",
     forceSubscribeChannelId: (map.force_subscribe_channel_id ?? "").trim() || null,
     forceSubscribeMessage: (map.force_subscribe_message ?? "").trim() || null,
@@ -622,6 +624,7 @@ export async function getPublicConfig() {
     instructionsLink: full.instructionsLink ?? null,
     ticketsEnabled: (full as { ticketsEnabled?: boolean }).ticketsEnabled ?? false,
     themeAccent: full.themeAccent ?? "default",
+    allowUserThemeChange: (full as any).allowUserThemeChange ?? true,
     googleAnalyticsId: full.googleAnalyticsId ?? null,
     yandexMetrikaId: full.yandexMetrikaId ?? null,
     forceSubscribeEnabled: full.forceSubscribeEnabled ?? false,
